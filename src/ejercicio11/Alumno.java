@@ -1,8 +1,13 @@
 package ejercicio11;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Alumno {
+public class Alumno implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private int nia;
 	private String nombre;
 	private String apellidos;

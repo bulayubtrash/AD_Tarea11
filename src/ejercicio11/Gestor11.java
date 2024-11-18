@@ -30,7 +30,7 @@ public class Gestor11 {
 	Alumno a1;
 	ArrayList<Alumno> aLista = new ArrayList<>();
 
-	private static final String URL = "jdbc:mysql://localhost:3306/alumno25";
+	private static final String URL = "jdbc:mysql://localhost:3306/alumnos25";
 	private static final String USER = "root";
 	private static final String PASSWORD = "manager1";
 
@@ -89,19 +89,20 @@ public class Gestor11 {
 		try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
 				PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			ps.setInt(0, a1.getNia());
-			ps.setString(1, a1.getNombre());
-			ps.setString(2, a1.getApellidos());
+			ps.setInt(1, a1.getNia());
+			ps.setString(2, a1.getNombre());
+			ps.setString(3, a1.getApellidos());
 
 			String genChar = String.valueOf(a1.getGenero());
-			ps.setString(3, genChar);
+			ps.setString(4, genChar);
 
-			Date fechaAux = (Date) a1.getFechaNac();
-			ps.setDate(4, fechaAux);
+	        // Convertir java.util.Date a java.sql.Date
+	        java.sql.Date fechaSQL = new java.sql.Date(a1.getFechaNac().getTime());
+	        ps.setDate(5, fechaSQL); 
 
-			ps.setString(5, a1.getCiclo());
-			ps.setString(6, a1.getCurso());
-			ps.setString(7, a1.getGrupo());
+			ps.setString(6, a1.getCiclo());
+			ps.setString(7, a1.getCurso());
+			ps.setString(8, a1.getGrupo());
 
 			int filasInsertadas = ps.executeUpdate();
 			if (filasInsertadas > 0) {
@@ -204,9 +205,11 @@ public class Gestor11 {
 	public void guardarEnFichero() {
 		String ruta;
 		System.out.println("Introduzca la ruta");
-		ruta = sc.nextLine();
+	    sc.nextLine();
 
-		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ruta))) {
+		ruta = sc.next();
+
+		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ruta));) {
 
 			oos.writeObject(aLista);
 
@@ -215,91 +218,118 @@ public class Gestor11 {
 	}
 
 	public void leerFichero() {
-		String ruta;
-		System.out.println("Introduzca la ruta");
-		ruta = sc.nextLine();
-		try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(ruta))) {
+	    String ruta;
+	    System.out.println("Introduzca la ruta del fichero para leer los datos (por ejemplo: alumnos.dat)");
+	    sc.nextLine(); // Para consumir la nueva línea pendiente
 
-			a1 = (Alumno) ois.readObject();
-			aLista.add(a1);
+	    ruta = sc.nextLine();  // Usar nextLine() para leer la ruta completa
 
-			insertarAlumno(a1);
+	    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(ruta))) {
+	        // Leer el objeto del archivo y asegurarse de que sea un ArrayList de Alumno
+			@SuppressWarnings("unchecked")
+			ArrayList<Alumno> listaAux = (ArrayList<Alumno>) ois.readObject();
+	        
+	        // Añadir los alumnos leídos a la lista principal
+	        aLista.addAll(listaAux);  
 
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
+	        // Insertar los alumnos en la base de datos
+	        for (Alumno alumno : listaAux) {
+	            insertarAlumno(alumno);
+	        }
+
+	        System.out.println("Alumnos cargados correctamente desde el archivo.");
+	    } catch (IOException | ClassNotFoundException e) {
+	        System.out.println("Error al leer el archivo: " + e.getMessage());
+	        e.printStackTrace();
+	    }
 	}
+
 
 	public void modificarNombrePK() {
-		System.out.println("Indicar el nia del alumno");
-		int nia = sc.nextInt();
-		System.out.println("Introducir nuevo nombre");
-		String nombre = sc.nextLine();
+	    System.out.println("Indicar el NIA del alumno:");
+	    int nia = sc.nextInt();
+	    sc.nextLine();  // Limpiar el buffer
+	    System.out.println("Introducir nuevo nombre:");
+	    String nombre = sc.nextLine();
 
-		String sql = "UPDATE alumnos SET nombre = ? WHERE nia = ?";
+	    String sql = "UPDATE alumnos SET nombre = ? WHERE nia = ?";
 
-		try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-				PreparedStatement ps = conn.prepareStatement(sql);) {
+	    try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+	         PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			ps.setString(1, nombre);
-			ps.setInt(2, nia);
+	        ps.setString(1, nombre);
+	        ps.setInt(2, nia);
 
-			int filasActualizadas = ps.executeUpdate();
-			if (filasActualizadas > 0) {
-				System.out.println("El nombre del alumno ha sido actualizado correctamente.");
-			}
+	        int filasActualizadas = ps.executeUpdate();
+	        if (filasActualizadas > 0) {
+	            System.out.println("El nombre del alumno ha sido actualizado correctamente.");
+	        } else {
+	            System.out.println("No se encontró un alumno con ese NIA.");
+	        }
 
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
-
+	    } catch (SQLException e) {
+	        System.out.println("Error al modificar el nombre: " + e.getMessage());
+	        e.printStackTrace();
+	    }
 	}
 
+
 	public void eliminarAlumnoPK() {
-		System.out.println("Indicar el nia del alumno");
-		int nia = sc.nextInt();
+	    System.out.println("Indicar el NIA del alumno a eliminar:");
+	    int nia = sc.nextInt();
 
-		String sql = "DELETE FROM alumnos WHERE nia = ?";
+	    String sql = "DELETE FROM alumnos WHERE nia = ?";
 
-		try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-				PreparedStatement ps = conn.prepareStatement(sql);) {
+	    try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+	         PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			ps.setInt(0, nia);
+	        ps.setInt(1, nia); 
 
-			int filasActualizadas = ps.executeUpdate();
-			if (filasActualizadas > 0) {
-				System.out.println("El alumno ha sido eliminado");
-			}
+	        int filasEliminadas = ps.executeUpdate();
+	        if (filasEliminadas > 0) {
+	            System.out.println("El alumno ha sido eliminado correctamente.");
+	        } else {
+	            System.out.println("No se encontró un alumno con ese NIA.");
+	        }
 
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
+	    } catch (SQLException e) {
+	        System.out.println("Error al eliminar el alumno: " + e.getMessage());
+	        e.printStackTrace();
+	    }
 	}
 
 	public void eliminarPorApellido() {
-		System.out.println("Indicar el apellido del alumno");
-		String apellidos=sc.nextLine();
-		String sql = "DELETE FROM alumnos WHERE apellido = ?";
+	    System.out.println("Indicar el apellido del alumno a eliminar:");
+	    sc.nextLine();
+	    String apellidos = sc.nextLine();
 
-		try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-				PreparedStatement ps = conn.prepareStatement(sql);) {
+	    String sql = "DELETE FROM alumnos WHERE apellido LIKE ?";
 
-			ps.setString(0, apellidos);
+	    try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+	         PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			int filasActualizadas = ps.executeUpdate();
-			if (filasActualizadas > 0) {
-				System.out.println("El alumno ha sido eliminado");
-			}
+	        ps.setString(1, "%" + apellidos + "%");
 
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
+	        int filasEliminadas = ps.executeUpdate();
+	        if (filasEliminadas > 0) {
+	            System.out.println("El alumno(s) con el apellido dado ha(n) sido eliminado(s) correctamente.");
+	        } else {
+	            System.out.println("No se encontraron alumnos con ese apellido.");
+	        }
+
+	    } catch (SQLException e) {
+	        System.out.println("Error al eliminar los alumnos: " + e.getMessage());
+	        e.printStackTrace();
+	    }
 	}
+
 
 	public void escribirJSON(ArrayList<Alumno>aLista) {
 		String ruta;
 		System.out.println("Introduzca la ruta");
-		ruta = sc.nextLine();
+	    sc.nextLine();
+
+		ruta = sc.next();
 		
 		Gson gson = new Gson();
 
@@ -315,38 +345,37 @@ public class Gestor11 {
 	}
 
 	public void leerJSON() {
-		ArrayList<Alumno> listaAux = new ArrayList<>();
+	    ArrayList<Alumno> listaAux = new ArrayList<>();
+	    
+	    String ruta;
+	    System.out.println("Introduzca la ruta");
+	    sc.nextLine();
+	    ruta = sc.nextLine(); 
+	    
+	    Gson gson = new Gson();
+	    
+	    try (FileReader reader = new FileReader(ruta)) {
+	        
+	        // Definir el tipo de la lista de alumnos usando TypeToken
+	        Type alumnosListType = new TypeToken<List<Alumno>>(){}.getType();
+	        
+	        // Leer el JSON y convertirlo en una lista de Alumno
+	        listaAux = gson.fromJson(reader, alumnosListType);
+	        
+	        if (listaAux == null) {
+	            listaAux = new ArrayList<>();
+	        }
 
-		String ruta;
-		System.out.println("Introduzca la ruta");
-		ruta = sc.nextLine();
-		Gson gson= new Gson();
-		
-		try(FileReader reader = new FileReader(ruta);) {
-			
-            // Definir el tipo de la lista de alumnos usando TypeToken
-			
-            Type alumnosListType = new TypeToken<List<Alumno>>(){}.getType();
-            
-            // Leer el JSON y convertirlo en una lista de Alumno
-            
-            listaAux = gson.fromJson(reader, alumnosListType);
-            
-            // Inicializar alumnos si el archivo está vacío
-            
-            if (listaAux == null) {
-            	listaAux = new ArrayList<>();
-            }
-            for (Alumno alumno : listaAux) {
-				System.out.println(alumno);
-				insertarAlumno(alumno);
-			}
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+	        for (Alumno alumno : listaAux) {
+	            System.out.println(alumno);
+	            insertarAlumno(alumno);
+	        }
+	        
+	    } catch (FileNotFoundException e) {
+	        System.out.println("El archivo no fue encontrado: " + e.getMessage());
+	    } catch (IOException e1) {
+	        System.out.println("Error al leer el archivo: " + e1.getMessage());
+	    }
 	}
+
 }
